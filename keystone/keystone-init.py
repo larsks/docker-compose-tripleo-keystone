@@ -11,6 +11,7 @@ import time
 DEFAULT_KEYSTONE_PUBLIC_URL = 'http://localhost:5000'
 DEFAULT_KEYSTONE_INTERNAL_URL = 'http://localhost:5000'
 DEFAULT_KEYSTONE_ADMIN_PASSWORD = 'keystone'
+DEFAULT_KEYSTONE_REGION = 'RegionOne'
 
 LOG = logging.getLogger(__name__)
 
@@ -99,11 +100,13 @@ subprocess.check_call(
     '--bootstrap-project-name admin '
     '--bootstrap-role-name admin '
     '--bootstrap-service-name keystone '
-    '--bootstrap-region-id RegionOne '
+    '--bootstrap-region-id {KEYSTONE_REGION} '
     '--bootstrap-public-url {KEYSTONE_PUBLIC_URL} '
     '--bootstrap-internal-url {KEYSTONE_INTERNAL_URL}'.format(
         KEYSTONE_ADMIN_PASSWORD=os.environ.get(
             'KEYSTONE_ADMIN_PASSWORD', DEFAULT_KEYSTONE_ADMIN_PASSWORD),
+        KEYSTONE_REGION=os.environ.get(
+            'KEYSTONE_REGION', DEFAULT_KEYSTONE_REGION),
         KEYSTONE_PUBLIC_URL=os.environ.get(
             'KEYSTONE_PUBLIC_URL', DEFAULT_KEYSTONE_PUBLIC_URL),
         KEYSTONE_INTERNAL_URL=os.environ.get(
