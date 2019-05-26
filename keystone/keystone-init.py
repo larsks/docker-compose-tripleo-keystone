@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import jinja2
+import logging
 import os
 import pymysql
 import subprocess
@@ -11,10 +12,12 @@ DEFAULT_KEYSTONE_PUBLIC_URL = 'http://localhost:5000'
 DEFAULT_KEYSTONE_INTERNAL_URL = 'http://localhost:5000'
 DEFAULT_KEYSTONE_ADMIN_PASSWORD = 'keystone'
 
+LOG = logging.getLogger(__name__)
+
 
 def wait_for_database(db_host, db_user, db_pass, db_name):
     while True:
-        print('Waiting for database...')
+        LOG.info('waiting for database...')
         try:
             connection = pymysql.connect(
                 host=db_host,
@@ -24,12 +27,16 @@ def wait_for_database(db_host, db_user, db_pass, db_name):
 
             break
         except pymysql.err.OperationalError as err:
-            print('Database connection failed: {}'.format(err))
+            LOG.warning('database connection failed: %s', format(err))
             time.sleep(1)
 
-    print('Database is available.')
+    LOG.info('database is available.')
     return connection
 
+
+######################################################################
+
+logging.basicConfig(level=os.environ.get('KEYSTONE_INIT_LOGLEVEL', 'INFO'))
 
 db_host = os.environ.get('KEYSTONE_DB_HOST', 'database')
 db_user_keystone = os.environ.get('KEYSTONE_DB_USER', 'keystone')
@@ -60,8 +67,7 @@ with connection.cursor() as cursor:
                        db_pass=db_pass_keystone))
 connection.close()
 
-print('templating files')
-
+LOG.info('generating keystone.conf')
 with open('/etc/keystone/keystone.j2.conf') as fd:
     t = jinja2.Template(fd.read())
 
@@ -75,17 +81,17 @@ with open('/etc/keystone/keystone.conf', 'w') as fd:
     ))
 
 
-print('initializing keystone db schema')
+LOG.info('initializing keystone db schema')
 subprocess.check_call(
     'keystone-manage db_sync'.split())
 
-print('setting up fernet tokens')
+LOG.info('setting up fernet tokens')
 subprocess.check_call(
     'keystone-manage fernet_setup '
     '--keystone-user keystone '
     '--keystone-group keystone'.split())
 
-print('bootstrapping keystone')
+LOG.info('bootstrapping keystone')
 subprocess.check_call(
     'keystone-manage bootstrap '
     '--bootstrap-password {KEYSTONE_ADMIN_PASSWORD} '
@@ -104,5 +110,5 @@ subprocess.check_call(
             'KEYSTONE_INTERNAL_URL', DEFAULT_KEYSTONE_INTERNAL_URL),
     ).split())
 
-print('running: {}'.format(sys.argv))
+LOG.info('running: %s', sys.argv[1:])
 os.execvp(sys.argv[1], sys.argv[1:])
